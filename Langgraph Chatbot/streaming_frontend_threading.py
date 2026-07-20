@@ -1,15 +1,38 @@
 import streamlit as st
 from chatbot_backend import chatbot
 from langchain_core.messages import SystemMessage , HumanMessage
+import uuid
 
-CONFIG = {'configurable' : {'thread_id':'thrad-1'}}
+# **************************** utility functions **********************
 
-# st.session_state -> dict store history
+def generate_thread_id():
+    thraed_id = uuid.uuid4()
+    return thraed_id
+
+def reset_chat():
+    thread_id = generate_thread_id()
+    st.session_state['thread_id'] = thread_id
+    st.session_state['message_history'] = []
+
 
 # ********************* Session Setup ***********************************
 
 if 'message_history' not in st.session_state:
     st.session_state['message_history'] = []
+
+if 'thread_id' not in st.session_state:
+    st.session_state['thread_id'] = generate_thread_id()
+
+# ******************** Sidebar UI *********************************
+
+st.sidebar.title('Langgraph Chatbot')
+
+if st.sidebar.button('New Chat'):
+    reset_chat()
+    
+st.sidebar.header('My Conversations')
+
+st.sidebar.text(st.session_state['thread_id'])
 
 # ************************** Main UI **************************************
 
@@ -27,6 +50,7 @@ if user_input:
     with st.chat_message('user'):
         st.text(user_input)
 
+    CONFIG = {'configurable' : {'thread_id':st.session_state['thread_id']}}
 
     # first add the message to message_history 
     with st.chat_message('assistant'):
@@ -34,7 +58,7 @@ if user_input:
         ai_message = st.write_stream(
             message_chunk.content for message_chunk , metadata in chatbot.stream(
                 {'messages' : [HumanMessage(content=user_input)]},
-                config= {'configurable' : {'thread_id':'thrad-1'}},
+                config= CONFIG,
                 stream_mode='messages'
             )
         )

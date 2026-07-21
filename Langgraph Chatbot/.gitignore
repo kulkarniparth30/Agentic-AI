@@ -1,4 +1,7 @@
 chatbot.db
+chatbot.db-shm
+chatbot.db-wal
+chatbot.db-journal
 .env
 __pycache__/
 *.pyc

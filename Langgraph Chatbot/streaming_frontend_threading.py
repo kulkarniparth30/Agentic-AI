@@ -19,8 +19,18 @@ def add_thread(thread_id):
     if thread_id not in st.session_state['chat_threads']:
         st.session_state['chat_threads'].append(thread_id)
 
+# def load_conversation(thread_id):
+#     return chatbot.get_state(config={'configurable' : {'thread_id':thread_id}}).values['messages']
+
 def load_conversation(thread_id):
-    return chatbot.get_state(config={'configurable' : {'thread_id':thread_id}}).values['messages']
+    state = chatbot.get_state(
+        config={"configurable": {"thread_id": thread_id}}
+    )
+
+    if not state.values:
+        return []
+
+    return state.values.get("messages", [])
 
 
 # ********************* Session Setup ***********************************

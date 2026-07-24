@@ -8,7 +8,10 @@ from langchain_core.messages import SystemMessage , HumanMessage , BaseMessage ,
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.prebuilt import ToolNode , tools_condition
-from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_community.tools import DuckDuckGoSearchRun ,WikipediaQueryRun  , YouTubeSearchTool
+from langchain_community.agent_toolkits.load_tools import load_tools
+from langchain_community.utilities import WikipediaAPIWrapper 
+from langchain_community.tools.semanticscholar.tool import SemanticScholarQueryRun
 from langchain_core.tools import tool
 import sqlite3
 import requests
@@ -23,13 +26,17 @@ llm = ChatGroq(
 )
 
 # llm = ChatGoogleGenerativeAI(
-#     model="gemini-3.1-flash-lite",
+#     model="gemini-2.0-flash-001",
 #     temperature=0, 
 #     streaming=True
 # )
 
 # Tools
 search_tool = DuckDuckGoSearchRun(region="us-en")
+wiki_tool = WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper(top_k_results=2, doc_content_chars_max=500))
+requests_tools = load_tools(["requests_all"], allow_dangerous_tools=True)
+youtube_tool = YouTubeSearchTool()
+semantic_scholar_tool = SemanticScholarQueryRun()
 
 @tool
 def calculator(first_num: float, second_num: float, operation: str) -> dict:
@@ -66,7 +73,7 @@ def get_stock_price(symbol: str) -> dict:
     r = requests.get(url)
     return r.json()
 
-tools = [search_tool , get_stock_price , calculator]
+tools = [search_tool , wiki_tool , *requests_tools , youtube_tool , semantic_scholar_tool , get_stock_price , calculator]
 llm_with_tools = llm.bind_tools(tools)
 
 class ChatState(TypedDict):
@@ -80,7 +87,7 @@ def chat_node(state: ChatState):
         response = AIMessage(content=f"Sorry, I couldn't process that request. Please try rephrasing. (Error: {str(e)[:100]})")
     return {'messages' :[response] }
 
-tool_node = ToolNode(tools)
+tool_node = ToolNode(tools, handle_tool_errors=True)
 
 conn = sqlite3.connect(database='chatbot.db' , check_same_thread=False)
 checkpointer = SqliteSaver(conn=conn)
